@@ -237,7 +237,7 @@ class _IndividualPageState extends State<IndividualPage>
                 {VoidCallback? refetch, FetchMore? fetchMore}) {
               if (result.hasException) {
                 return ResponsiveErrorWidget(
-                    errorMessage: result.hasException.toString(),
+                    errorMessage: result.exception.toString(),
                    onRetry: onRefresh);
               }
 

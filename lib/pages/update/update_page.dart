@@ -1,20 +1,19 @@
-import 'package:blog_app/pages/home_page/home_page.dart';
 import 'package:blog_app/theme/app_decoration.dart';
 import 'package:blog_app/theme/app_style.dart';
 import 'package:blog_app/utils/size_utils.dart';
 import 'package:blog_app/widget/bar_button.dart';
 import 'package:blog_app/widget/custom_text_form_field.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
-class CreatePage extends StatelessWidget {
+class UpdatePage extends StatelessWidget {
   String subTitle;
   String body;
   String title;
-
-  CreatePage(
+  String blogId;
+  UpdatePage(
       {Key? key,
+      required this.blogId,
       required this.body,
       required this.title,
       required this.subTitle})
@@ -25,13 +24,18 @@ class CreatePage extends StatelessWidget {
   TextEditingController subTitleController = TextEditingController();
   TextEditingController bodyController = TextEditingController();
 
-  void createBlogPost(
-      BuildContext context, String title, String subTitle, String? body) {
+  void updateBlogPost(
+    BuildContext context,
+    String blogId,
+    String title,
+    String subTitle,
+    String? body,
+  ) {
     final GraphQLClient client = GraphQLProvider.of(context).value;
 
-    final String createBlogPostMutation = '''
-    mutation CreateBlogPost(\$title: String!, \$subTitle: String!, \$body: String!) {
-      createBlog(title: \$title, subTitle: \$subTitle, body: \$body) {
+    final String updateBlogPostMutation = '''
+    mutation UpdateBlogPost(\$blogId: String!, \$title: String!, \$subTitle: String!, \$body: String!) {
+      updateBlog(blogId: \$blogId, title: \$title, subTitle: \$subTitle, body: \$body) {
         success
         blogPost {
           id
@@ -47,8 +51,13 @@ class CreatePage extends StatelessWidget {
     client
         .mutate(
       MutationOptions(
-        document: gql(createBlogPostMutation),
-        variables: {'title': title, 'subTitle': subTitle, 'body': body},
+        document: gql(updateBlogPostMutation),
+        variables: {
+          'blogId': blogId,
+          'title': title,
+          'subTitle': subTitle,
+          'body': body
+        },
       ),
     )
         .then((result) {
@@ -56,26 +65,27 @@ class CreatePage extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Error creating blog post: ${result.exception.toString()}'),
+                'Error updating blog post: ${result.exception.toString()}'),
           ),
         );
-      } else if (result.data?['createBlog']['success'] == true) {
+      } else if (result.data?['updateBlog']['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Blog post created successfully'),
+            content: Text('Blog post updated successfully'),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create blog post'),
+            content: Text('Failed to update blog post'),
           ),
         );
+        print(result.exception.toString());
       }
     }).catchError((error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error creating blog post: $error'),
+          content: Text('Error updating blog post: $error'),
         ),
       );
     });
@@ -213,9 +223,9 @@ class CreatePage extends StatelessWidget {
                     bottom: 12,
                   ),
                   onTap: () {
-                    createBlogPost(context, title, subTitle, body);
+                    updateBlogPost(context, blogId, title, subTitle, body);
                   },
-                  text: 'Post',
+                  text: 'Update',
                 ),
               ],
             ),

@@ -1,9 +1,13 @@
 import 'package:blog_app/apiclient/api_client.dart';
 import 'package:blog_app/model/blog_model.dart';
+import 'package:blog_app/pages/createPage/create_page.dart';
 import 'package:blog_app/pages/individual_page/individual_page.dart';
 import 'package:blog_app/pages/query_document_provider.dart';
+import 'package:blog_app/pages/update/update_page.dart';
 import 'package:blog_app/queries/queries.dart';
+import 'package:blog_app/utils/size_utils.dart';
 import 'package:blog_app/widget/app_search_bar.dart';
+import 'package:blog_app/widget/bar_button.dart';
 import 'package:blog_app/widget/custom_loading_widget.dart';
 import 'package:blog_app/widget/error_widget.dart';
 import 'package:blog_app/widget/helpers.dart';
@@ -18,12 +22,16 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late AnimationController animationController;
   bool isLoading = false;
   var error = '';
+
+  String? subTitle;
+  String? body;
+  String? title;
+  String? blogId;
 
   @override
   void initState() {
@@ -32,7 +40,6 @@ class _HomePageState extends State<HomePage>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat();
-   // GraphQClient();
   }
 
   @override
@@ -43,7 +50,7 @@ class _HomePageState extends State<HomePage>
 
   Future<void> onRefresh() async {
     await Future.delayed(Duration(seconds: 1));
-
+    setState(() {});
   }
 
   Widget getDate() {
@@ -62,34 +69,52 @@ class _HomePageState extends State<HomePage>
   }
 
   void deleteBlogPost(BuildContext context, String blogId) {
-     final GraphQLClient client = GraphQLProvider.of(context).value;
-  final String deleteBlogPostMutation = '''
-    mutation DeleteBlogPost(\$blogId: String!) {
-      deleteBlog(blogId: \$blogId) {
-        success
+    final GraphQLClient client = GraphQLProvider.of(context).value;
+    final String deleteBlogPostMutation = '''
+      mutation DeleteBlogPost(\$blogId: String!) {
+        deleteBlog(blogId: \$blogId) {
+          success
+        }
       }
-    }
-  ''';
+    ''';
 
-  client.mutate(
-    MutationOptions(
-      document: gql(deleteBlogPostMutation),
-      variables: {'blogId': blogId},
-    ),
-  ).then((result) {
-    if (result.hasException) {
-      // Handle error
-      print('Error deleting blog post: ${result.exception.toString()}');
-    } else {
-      // Blog post deleted successfully
-      // You may want to refresh the UI or show a confirmation message
-      print('Blog post deleted successfully');
-    }
-  }).catchError((error) {
-    // Handle error
-    print('Error deleting blog post: $error');
-  });
-}
+    client
+        .mutate(
+      MutationOptions(
+        document: gql(deleteBlogPostMutation),
+        variables: {'blogId': blogId},
+      ),
+    )
+        .then((result) {
+      if (result.hasException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Error deleting blog post: ${result.exception.toString()}'),
+          ),
+        );
+      } else if (result.data?['deleteBlog']['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Blog post deleted successfully'),
+          ),
+        );
+        setState(() {});
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Blog post was not deleted'),
+          ),
+        );
+      }
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting blog post: $error'),
+        ),
+      );
+    });
+  }
 
   Widget getImage() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -98,19 +123,22 @@ class _HomePageState extends State<HomePage>
             "Blog",
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 40),
           ),
-          InkWell(
-            /* onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => IndividualPage()));
-            }, */
-            hoverColor: Colors.deepOrange,
-            child: Container(
-                height: 50,
-                width: 50,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.elliptical(20, 20)),
-                    image: DecorationImage(
-                        image: NetworkImage(
-                            "https://images.unsplash.com/photo-1498758536662-35b82cd15e29?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60")))),
+          BarButton(
+            margin: getMargin(
+              left: 21,
+              top: 13,
+              //  right: 21,
+              bottom: 12,
+            ),
+            onTap: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => CreatePage(
+                    title: title ?? '',
+                    subTitle: subTitle ?? '',
+                    body: body ?? '',
+                  )));
+            },
+            text: 'Create',
           ),
         ],
       );
@@ -128,7 +156,7 @@ class _HomePageState extends State<HomePage>
       child: Column(
         children: <Widget>[
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -136,10 +164,35 @@ class _HomePageState extends State<HomePage>
                   alignment: Alignment.topRight,
                   children: <Widget>[
                     InkWell(
-                        onTap: () {
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => UpdatePage(
+                               title: title ?? '',
+                               subTitle: subTitle ?? '',
+                               body: body ?? '',
+                               blogId: blogId ?? '',
+                                )));
+                      },
+                      child: Icon(
+                        Icons.create,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: <Widget>[
+                    InkWell(
+                      onTap: () {
                         deleteBlogPost(context, blog.id);
-                        },
-
+                      },
                       child: Icon(
                         Icons.delete_forever,
                         color: Colors.white,
@@ -209,11 +262,11 @@ class _HomePageState extends State<HomePage>
                       padding: const EdgeInsets.only(right: 15),
                       child: Container(
                         width: 200,
-                        child: Text(
-                          blog.subTitle,
-                          overflow: TextOverflow.ellipsis,     
+                        child: Text(blog.subTitle,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w600)),
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600)),
                       ),
                     ),
                     SizedBox(
@@ -339,11 +392,10 @@ class _HomePageState extends State<HomePage>
                   {VoidCallback? refetch, FetchMore? fetchMore}) {
                 if (result.hasException) {
                   return ResponsiveErrorWidget(
-                    errorMessage: result.hasException.toString(), 
-                    onRetry: onRefresh
-                    );
+                      errorMessage: result.hasException.toString(),
+                      onRetry: onRefresh);
                 }
-          
+
                 if (result.isLoading) {
                   return Center(
                     child: CustomLoadingWidget(
@@ -382,16 +434,17 @@ class _HomePageState extends State<HomePage>
                                       itemBuilder: (context, index) {
                                         final BlogModel blog = blogs[index];
                                         return SingleChildScrollView(
-                                          child: InkWell(
-                                            hoverColor: Colors.white70,
-                                            enableFeedback: true,
-                                            onTap: () {
-                                             Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => IndividualPage()));
-                                               },
-                                            child: getListItem(blog)));
+                                            child: InkWell(
+                                                hoverColor: Colors.white70,
+                                                enableFeedback: true,
+                                                onTap: () {
+                                                  Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              IndividualPage()));
+                                                },
+                                                child: getListItem(blog)));
                                       }))),
                           SizedBox(height: 30),
                           Row(
@@ -413,28 +466,28 @@ class _HomePageState extends State<HomePage>
                           SizedBox(height: 30),
                           Column(children: [
                             Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: SizedBox(
-                                height: 500,
-                                child: ListView.builder(
-                                    scrollDirection: Axis.vertical,
-                                    physics:
-                                        const BouncingScrollPhysics(),
-                                    itemCount: blogs.length,
-                                    itemBuilder: (context, index) {
-                                      final BlogModel blog = blogs[index];
-                                      return InkWell(
-                                        hoverColor: Colors.white70,
-                                        enableFeedback: true,
-                                        onTap: () {
-                                         Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                         builder: (context) => IndividualPage()));
-                                        },
-                                        child: popularWidget(blog));
-                                    })))
-                                                      ])
+                                padding: const EdgeInsets.all(8.0),
+                                child: SizedBox(
+                                    height: 500,
+                                    child: ListView.builder(
+                                        scrollDirection: Axis.vertical,
+                                        physics: const BouncingScrollPhysics(),
+                                        itemCount: blogs.length,
+                                        itemBuilder: (context, index) {
+                                          final BlogModel blog = blogs[index];
+                                          return InkWell(
+                                              hoverColor: Colors.white70,
+                                              enableFeedback: true,
+                                              onTap: () {
+                                                Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            IndividualPage()));
+                                              },
+                                              child: popularWidget(blog));
+                                        }))),
+                          ]),
                         ])));
               }),
         ));
