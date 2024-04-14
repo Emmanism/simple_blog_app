@@ -1,4 +1,3 @@
-import 'package:blog_app/apiclient/api_client.dart';
 import 'package:blog_app/model/blog_model.dart';
 import 'package:blog_app/pages/createPage/create_page.dart';
 import 'package:blog_app/pages/individual_page/individual_page.dart';

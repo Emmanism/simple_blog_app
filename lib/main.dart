@@ -1,4 +1,3 @@
-import 'package:blog_app/apiclient/api_client.dart';
 import 'package:blog_app/pages/home_page/home_page.dart';
 import 'package:blog_app/pages/query_document_provider.dart';
 import 'package:blog_app/queries/queries.dart';
